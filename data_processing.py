@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from scipy import stats
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
@@ -146,7 +145,3 @@ def main(filepath):
 
 filepath = 'marketing_campaign.csv'
 train_df, test_df = main(filepath)
-
-print(train_df.shape)
-print(test_df.shape)
-
