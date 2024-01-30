@@ -1,6 +1,5 @@
 import pandas as pd
 from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
 
 from data_processing import process_file
 
@@ -31,11 +30,8 @@ clusters = kmeans.fit_predict(df_selected)
 processed_data['Cluster'] = clusters
 
 # print the mean of each feature for each cluster
-print(processed_data[selected_num_features + ['Cluster']].groupby('Cluster').mean())
-print(processed_data[selected_cat_features + ['Cluster']].groupby('Cluster').mean())
+#print(processed_data[selected_num_features + ['Cluster']].groupby('Cluster').mean())
+#print(processed_data[selected_cat_features + ['Cluster']].groupby('Cluster').mean())
 
-# plot the clusters
-plt.scatter(processed_data['MntWines'], processed_data['Income'], c=processed_data['Cluster'])
-plt.xlabel('MntWines')
-plt.ylabel('Income')
-plt.show()
+# save to csv
+processed_data.to_csv('processed_data.csv', index=False)
