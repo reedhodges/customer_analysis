@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
@@ -83,22 +83,22 @@ def preprocess_data(df, categorical_cols, full_date_cols, boolean_cols, numerica
     df = replace_categorical_outliers(df, categorical_cols, 10)
     df = process_datetime(df, full_date_cols)
 
-    # Creating pipelines for different types of data
     categorical_pipeline = Pipeline([
         ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('encoder', OneHotEncoder(sparse_output=False, handle_unknown='ignore'))
+        ('encoder', OneHotEncoder(sparse_output=False, handle_unknown='ignore')),
+        ('scaler', StandardScaler())
     ])
 
     boolean_pipeline = Pipeline([
-        ('imputer', SimpleImputer(strategy='constant', fill_value=0))
+        ('imputer', SimpleImputer(strategy='constant', fill_value=0)),
+        ('scaler', StandardScaler())
     ])
 
     numerical_pipeline = Pipeline([
         ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', MinMaxScaler())
+        ('scaler', StandardScaler())
     ])
 
-    # Combining pipelines in a ColumnTransformer
     preprocessor = ColumnTransformer([
         ('cat', categorical_pipeline, categorical_cols),
         ('bool', boolean_pipeline, boolean_cols),
@@ -107,17 +107,13 @@ def preprocess_data(df, categorical_cols, full_date_cols, boolean_cols, numerica
 
     processed_data = preprocessor.fit_transform(df)
 
-    # retrieve the column names
     new_categorical_cols = preprocessor.named_transformers_['cat']['encoder'].get_feature_names_out(categorical_cols)
     all_column_names = np.concatenate([new_categorical_cols, boolean_cols, numerical_cols])
 
-    # Creating a new DataFrame with the correct column names
     return pd.DataFrame(processed_data, columns=all_column_names)
 
-def main(filepath):
+def process_file(filepath, split_Q):
     """
-    Main function to execute the data preprocessing steps on a given dataset.
-
     This function reads data from a specified file, identifies different types of columns
     (categorical, datetime, boolean, numerical), and applies preprocessing steps to both 
     training and testing datasets. The data is first split into training and testing sets, 
@@ -136,12 +132,16 @@ def main(filepath):
     boolean_cols = ['AcceptedCmp' + str(i) for i in range(1, 6)] + ['Response', 'Complain']
     numerical_cols = [col for col in df.columns if col not in categorical_cols + boolean_cols + full_date_cols + ['ID']]
 
-    train_df, test_df = train_test_split(df, test_size=0.2, random_state=0)
-    train_df = remove_outliers(train_df, numerical_cols)
-    train_df = preprocess_data(train_df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
-    test_df = preprocess_data(test_df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
-
-    return train_df, test_df
-
-filepath = 'marketing_campaign.csv'
-train_df, test_df = main(filepath)
+    if split_Q == True:
+        train_df, test_df = train_test_split(df, test_size=0.2, random_state=0)
+        train_df = remove_outliers(train_df, numerical_cols)
+        train_df = preprocess_data(train_df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
+        test_df = preprocess_data(test_df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
+        return train_df, test_df
+    elif split_Q == False:
+        df = remove_outliers(df, numerical_cols)
+        df = preprocess_data(df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
+        return df
+    else:
+        print("Error: split_Q must be True or False")
+        return None

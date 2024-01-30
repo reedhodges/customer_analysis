@@ -1,8 +1,10 @@
-import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
-from data_processing import train_df, test_df
+from data_processing import process_file
+
+filepath = 'marketing_campaign.csv'
+train_df, test_df = process_file(filepath, split_Q=True)
 
 independent_vars = ['Year_Birth', 'Income', 'Kidhome', 'Teenhome']
 dependent_var = 'MntWines'
