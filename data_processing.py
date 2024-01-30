@@ -42,7 +42,42 @@ def process_datetime(df, cols):
         df.drop(col, axis=1, inplace=True)
     return df
 
+def remove_outliers(df, numerical_cols, threshold=1.5):
+    """
+    Remove outliers from the DataFrame based on the Interquartile Range (IQR) method.
+
+    Parameters:
+    df (DataFrame): The DataFrame to process.
+    numerical_cols (list of str): List of numerical column names to check for outliers.
+    threshold (float): The IQR multiplier to define what is considered an outlier.
+
+    Returns:
+    DataFrame: The DataFrame with outliers removed.
+    """
+    Q1 = df[numerical_cols].quantile(0.25)
+    Q3 = df[numerical_cols].quantile(0.75)
+    IQR = Q3 - Q1
+    mask = (df[numerical_cols] < (Q1 - threshold * IQR)) | (df[numerical_cols] > (Q3 + threshold * IQR))
+    return df[~mask.any(axis=1)]
+
 def preprocess_data(df, categorical_cols, full_date_cols, boolean_cols, numerical_cols):
+    """
+    Preprocess the input DataFrame by applying several data transformation steps.
+
+    This function performs operations such as removing duplicates, dropping unnecessary columns,
+    replacing categorical outliers, processing datetime columns, and applying transformations 
+    like imputation, encoding, and scaling to the data using defined pipelines.
+
+    Parameters:
+    df (DataFrame): The input DataFrame to be preprocessed.
+    categorical_cols (list of str): List of categorical column names to be processed.
+    full_date_cols (list of str): List of datetime column names to be converted to year.
+    boolean_cols (list of str): List of boolean column names to be imputed.
+    numerical_cols (list of str): List of numerical column names to be imputed and scaled.
+
+    Returns:
+    DataFrame: A new DataFrame with the preprocessing applied.
+    """
     df = df.drop_duplicates()
     df.drop(['ID'], axis=1, inplace=True)
     
@@ -71,19 +106,31 @@ def preprocess_data(df, categorical_cols, full_date_cols, boolean_cols, numerica
         ('num', numerical_pipeline, numerical_cols)
     ])
 
-    # Fit and transform the data
     processed_data = preprocessor.fit_transform(df)
 
-    # Getting new column names for categorical columns after OneHotEncoding
+    # retrieve the column names
     new_categorical_cols = preprocessor.named_transformers_['cat']['encoder'].get_feature_names_out(categorical_cols)
-
-    # Combining all column names
     all_column_names = np.concatenate([new_categorical_cols, boolean_cols, numerical_cols])
 
     # Creating a new DataFrame with the correct column names
     return pd.DataFrame(processed_data, columns=all_column_names)
 
 def main(filepath):
+    """
+    Main function to execute the data preprocessing steps on a given dataset.
+
+    This function reads data from a specified file, identifies different types of columns
+    (categorical, datetime, boolean, numerical), and applies preprocessing steps to both 
+    training and testing datasets. The data is first split into training and testing sets, 
+    and then each set is processed using the preprocess_data function.
+
+    Parameters:
+    filepath (str): File path to the dataset to be processed.
+
+    Returns:
+    tuple: A tuple containing two DataFrames, (train_df, test_df), 
+           which are the training and testing datasets after preprocessing.
+    """
     df = pd.read_csv(filepath, delimiter='\t')
     categorical_cols = ['Education', 'Marital_Status']
     full_date_cols = ['Dt_Customer']
@@ -91,15 +138,15 @@ def main(filepath):
     numerical_cols = [col for col in df.columns if col not in categorical_cols + boolean_cols + full_date_cols + ['ID']]
 
     train_df, test_df = train_test_split(df, test_size=0.2, random_state=0)
-
+    train_df = remove_outliers(train_df, numerical_cols)
     train_df = preprocess_data(train_df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
     test_df = preprocess_data(test_df, categorical_cols, full_date_cols, boolean_cols, numerical_cols)
 
     return train_df, test_df
 
-# Usage
 filepath = 'marketing_campaign.csv'
 train_df, test_df = main(filepath)
 
-print(train_df.columns)
+print(train_df.shape)
+print(test_df.shape)
 
